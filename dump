@@ -1,0 +1,1 @@
+            {history.find((thread) => thread.threadId === threadId)?.conversations[0]?.prompt || `Thread ${threadId}`}
