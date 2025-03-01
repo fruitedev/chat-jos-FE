@@ -8,7 +8,7 @@ const AppWrapper = styled.div`
 `;
 
 const SideNav = styled.div`
-  width: 250px;
+  min-width: 250px;
   background-color: #111828;
   color: white;
   padding: 20px;
@@ -109,12 +109,27 @@ const ModelDescription = styled.p`
   color: #666;
 `;
 
+const Spinner = styled.div`
+  border: 4px solid #222;
+  border-top: 4px solid #5447ba;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
 const App = () => {
   const [threads, setThreads] = useState([]);
   const [inputText, setInputText] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState(null);
   const [history, setHistory] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const models = [
     { id: "model1", name: "PRD Assistant", description: "Description for Model 1" },
@@ -130,7 +145,7 @@ const App = () => {
 
   const fetchHistory = async () => {
     try {
-      const response = await fetch("http://localhost:3000/history");
+      const response = await fetch("http://localhost:3012/history");
       const data = await response.json();
       setHistory(data);
       setThreads(data.map((thread) => thread.threadId));
@@ -170,18 +185,19 @@ const App = () => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
+      // Ensure the input is cleared and the UI updates
+      setInputText("");
+      
       const response = await fetch(
-        `http://localhost:3000/chat?threadId=${selectedThreadId}&prompt=${encodeURIComponent(inputText)}`
+        `http://localhost:3012/chat?threadId=${selectedThreadId}&prompt=${encodeURIComponent(inputText)}`
       );
 
       const data = await response.json();
 
-      console.log('API Response:', data);
-
       if (response.ok) {
-        console.log('Updating history with:', data.thread);
-
         // Update the history with the new thread data
         const updatedHistory = history.map((thread) => {
           if (thread.threadId === data.thread.threadId) {
@@ -201,8 +217,6 @@ const App = () => {
         // Update state with the new history
         setHistory(updatedHistory);
 
-        // Ensure the input is cleared and the UI updates
-        setInputText("");
 
         // Keep the selected thread ID to continue the conversation
         setSelectedThreadId(selectedThreadId);
@@ -212,6 +226,8 @@ const App = () => {
       }
     } catch (error) {
       console.error("Error sending message:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -276,7 +292,6 @@ const App = () => {
           ))}
         </ModelCardWrapper>
 
-        <h2>Chat Area - {selectedThreadId || "Select a thread"}</h2>
 
         {/* Display message if no chats are present */}
         {selectedThreadId && history.find((thread) => thread.threadId === selectedThreadId)?.conversations.length === 0 && (
@@ -368,11 +383,15 @@ const App = () => {
               }
             }}
           />
-          <button onClick={handleSendMessage} type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm p-2.5 text-center inline-flex items-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9" />
-            </svg>
-          </button>
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <button onClick={handleSendMessage} type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm p-2.5 text-center inline-flex items-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+              <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9" />
+              </svg>
+            </button>
+          )}
         </InputPromptWrapper>
       </ChatArea>
     </AppWrapper>
